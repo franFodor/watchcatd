@@ -11,6 +11,7 @@
 #define ERR_INIT_INOTIFY    3
 #define ERR_INOTIFY_ADD     4
 #define ERR_INOTIFY_READ    5
+#define ERR_DAEMON          6
 
 int IEventQueue;
 int IEventStatus;
@@ -26,6 +27,12 @@ static void get_filename(char **buf ) {
 }
 
 int main(int argc, char **argv) {
+  int ret = daemon(1, 1);
+  if (ret == -1) {
+    fprintf(stderr, "Failed to daemonize!");
+    exit(ERR_DAEMON);
+  }
+  
   char *base_path = NULL;
   char *notification_msg = NULL;
 
@@ -57,13 +64,14 @@ int main(int argc, char **argv) {
     exit(ERR_INIT_INOTIFY);
   }
 
+  printf("di je faile%s\n", argv[1]);
   IEventStatus = inotify_add_watch(IEventQueue, argv[1], watch_mask);
   if (IEventStatus == -1) {
+    perror("wtf");
     fprintf(stderr, "Error adding file to watch instance!");
     exit(ERR_INOTIFY_ADD);
   }
   
-
   while (1) {
      fprintf(stdout, "Waiting for event...\n");
 
@@ -95,8 +103,7 @@ int main(int argc, char **argv) {
 
        fprintf(stdout, "%s\n", notification_msg);
      }
-  }
-  
+  }  
 
   return 0;
 }
