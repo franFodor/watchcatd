@@ -64,10 +64,8 @@ int main(int argc, char **argv) {
     exit(ERR_INIT_INOTIFY);
   }
 
-  printf("di je faile%s\n", argv[1]);
   IEventStatus = inotify_add_watch(IEventQueue, argv[1], watch_mask);
   if (IEventStatus == -1) {
-    perror("wtf");
     fprintf(stderr, "Error adding file to watch instance!");
     exit(ERR_INOTIFY_ADD);
   }
