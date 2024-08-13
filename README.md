@@ -1,7 +1,7 @@
 # watchcatd
 
-Simple daemon to keep track of changes on a file. 
-https://www.youtube.com/watch?v=9nDYYc_7sKs
+Simple daemon to keep track of changes on a file. Changes being access, 
+modify and delete.
 
 ## Installation
 
