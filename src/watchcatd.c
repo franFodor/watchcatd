@@ -4,6 +4,8 @@
 #include <sys/inotify.h>
 #include <unistd.h>
 
+#include <libnotify/notify.h>
+
 #define BUFFER_MAX          4096
 
 #define ERR_ARGS            1
@@ -12,9 +14,7 @@
 #define ERR_INOTIFY_ADD     4
 #define ERR_INOTIFY_READ    5
 #define ERR_DAEMON          6
-
-int IEventQueue;
-int IEventStatus;
+#define ERR_NOTIFY_INIT     7
 
 static void get_filename(char **buf ) {
   char *token = NULL;
@@ -26,32 +26,46 @@ static void get_filename(char **buf ) {
   }
 }
 
-static void handle_file_changes(char *file_path) {
+static void handle_file_changes(char *file_name, char *file_path) {
   char *notification_msg = NULL;
   char buffer[BUFFER_MAX];
   int read_length;
+  int ret;
+
+  int IEventQueue;
+  int IEventStatus;
+
+  char *program_title = "watchcatd";
+
+  NotifyNotification *notify_handle;
+
+  ret = notify_init(program_title);
+  if (!ret) {
+    perror("Error initilizing notify: ");
+    exit(ERR_NOTIFY_INIT);
+  }
 
   const struct inotify_event *watch_event;
   const int watch_mask = IN_DELETE | IN_ACCESS | IN_MODIFY; 
 
   IEventQueue = inotify_init();
   if (IEventQueue == -1) {
-    fprintf(stderr, "Error initilizing inotify instance!");
+    perror("Error initilizing inotify instance: ");
     exit(ERR_INIT_INOTIFY);
   }
 
   IEventStatus = inotify_add_watch(IEventQueue, file_path, watch_mask);
   if (IEventStatus == -1) {
-    fprintf(stderr, "Error adding file to watch instance!");
+    perror("Error adding file to watch instance: ");
     exit(ERR_INOTIFY_ADD);
   }
   
   while (1) {
-     fprintf(stdout, "Waiting for event...\n");
+     //fprintf(stdout, "Waiting for event...\n");
 
      read_length = read(IEventQueue, buffer, BUFFER_MAX);
      if (read_length == -1) {
-       fprintf(stderr, "Error reading for inotify instance!");
+       perror("Error reading for inotify instance: ");
        exit(ERR_INOTIFY_READ);
      }
      
@@ -75,7 +89,15 @@ static void handle_file_changes(char *file_path) {
          continue;
        }
 
-       fprintf(stdout, "%s\n", notification_msg);
+       //fprintf(stdout, "%s\n", notification_msg);
+       notify_handle = notify_notification_new(file_name, notification_msg, "dialog-information");
+
+       if (!notify_handle) {
+         perror("Handle was null: ");
+         continue;
+       }
+
+       notify_notification_show(notify_handle, NULL);
      }
   }  
 
@@ -84,7 +106,7 @@ static void handle_file_changes(char *file_path) {
 int main(int argc, char **argv) {
   int ret = daemon(1, 1);
   if (ret == -1) {
-    fprintf(stderr, "Failed to daemonize!");
+    perror("Failed to daemonize: ");
     exit(ERR_DAEMON);
   }
   
@@ -96,7 +118,7 @@ int main(int argc, char **argv) {
 
   base_path = (char *)malloc(sizeof(char) * strlen(argv[1]) + 1);
   if (!base_path) {
-    fprintf(stderr, "Memory allocation failed!");
+    perror("Memory allocation failed: ");
     exit(ERR_MEM_ALLOC);
   }
 
@@ -104,7 +126,7 @@ int main(int argc, char **argv) {
   get_filename(&base_path);
   //fprintf(stdout, "Filename: %s\n", base_path);
 
-  handle_file_changes(argv[1]);
+  handle_file_changes(base_path, argv[1]);
   
   return 0;
 }

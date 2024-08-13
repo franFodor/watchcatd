@@ -1,5 +1,5 @@
 # Compiler flags
-CFLAGS = -Wall -Werror
+CFLAGS = -Wall -Werror -std=gnu99 -pedantic
 
 # Source file
 SRC = src/watchcatd.c
@@ -11,8 +11,7 @@ OUT = watchcatd
 all: $(OUT)
 
 $(OUT): $(SRC)
-	gcc $(CFLAGS) -o $(OUT) $(SRC)
-
+	gcc $(CFLAGS) $(SRC) -o $(OUT) `pkg-config --cflags --libs libnotify` 
 clean:
 	rm -f $(OUT)
 
