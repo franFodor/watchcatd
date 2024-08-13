@@ -26,37 +26,13 @@ static void get_filename(char **buf ) {
   }
 }
 
-int main(int argc, char **argv) {
-  int ret = daemon(1, 1);
-  if (ret == -1) {
-    fprintf(stderr, "Failed to daemonize!");
-    exit(ERR_DAEMON);
-  }
-  
-  char *base_path = NULL;
+static void handle_file_changes(char *file_path) {
   char *notification_msg = NULL;
-
   char buffer[BUFFER_MAX];
   int read_length;
 
   const struct inotify_event *watch_event;
-
   const int watch_mask = IN_DELETE | IN_ACCESS | IN_MODIFY; 
-
-  if (argc != 2) {
-    fprintf(stderr, "USAGE: watchcatd <PATH>");
-    exit(ERR_ARGS);
-  }
-
-  base_path = (char *)malloc(sizeof(char) * strlen(argv[1]) + 1);
-  if (!base_path) {
-    fprintf(stderr, "Memory allocation failed!");
-    exit(ERR_MEM_ALLOC);
-  }
-
-  strcpy(base_path, argv[1]);
-  get_filename(&base_path);
-  //fprintf(stdout, "Filename: %s\n", base_path);
 
   IEventQueue = inotify_init();
   if (IEventQueue == -1) {
@@ -64,7 +40,7 @@ int main(int argc, char **argv) {
     exit(ERR_INIT_INOTIFY);
   }
 
-  IEventStatus = inotify_add_watch(IEventQueue, argv[1], watch_mask);
+  IEventStatus = inotify_add_watch(IEventQueue, file_path, watch_mask);
   if (IEventStatus == -1) {
     fprintf(stderr, "Error adding file to watch instance!");
     exit(ERR_INOTIFY_ADD);
@@ -103,5 +79,32 @@ int main(int argc, char **argv) {
      }
   }  
 
+}
+
+int main(int argc, char **argv) {
+  int ret = daemon(1, 1);
+  if (ret == -1) {
+    fprintf(stderr, "Failed to daemonize!");
+    exit(ERR_DAEMON);
+  }
+  
+  char *base_path = NULL;
+  if (argc != 2) {
+    fprintf(stderr, "USAGE: watchcatd <PATH>");
+    exit(ERR_ARGS);
+  }
+
+  base_path = (char *)malloc(sizeof(char) * strlen(argv[1]) + 1);
+  if (!base_path) {
+    fprintf(stderr, "Memory allocation failed!");
+    exit(ERR_MEM_ALLOC);
+  }
+
+  strcpy(base_path, argv[1]);
+  get_filename(&base_path);
+  //fprintf(stdout, "Filename: %s\n", base_path);
+
+  handle_file_changes(argv[1]);
+  
   return 0;
 }
