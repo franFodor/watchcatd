@@ -11,6 +11,9 @@ Run simply with make:
 make all  
 ```
 
+On Ubuntu 24.04 LTS you might need to install the notification libary for 
+the header file: `sudo apt install libnotify-dev`.
+
 After running with `./watchcatd <FILE_PATH>` (you can try `.watchcatd 
 src/test.txt` for instance), it will start a daemon. To kill it, you will have 
 to find the process and kill it. You can use the following command to get PID 
