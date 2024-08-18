@@ -3,6 +3,7 @@
 #include <string.h>
 #include <sys/inotify.h>
 #include <unistd.h>
+#include <signal.h>
 
 #include <libnotify/notify.h>
 
@@ -15,6 +16,9 @@
 #define ERR_INOTIFY_READ    5
 #define ERR_DAEMON          6
 #define ERR_NOTIFY_INIT     7
+
+int IEventQueue;
+int IEventStatus;
 
 static void get_filename(char **buf ) {
   char *token = NULL;
@@ -31,10 +35,7 @@ static void handle_file_changes(char *file_name, char *file_path) {
   char buffer[BUFFER_MAX];
   int read_length;
   int ret;
-
-  int IEventQueue;
-  int IEventStatus;
-
+  
   char *program_title = "watchcatd";
 
   NotifyNotification *notify_handle;
@@ -100,7 +101,22 @@ static void handle_file_changes(char *file_name, char *file_path) {
        notify_notification_show(notify_handle, NULL);
      }
   }  
+}
 
+void signal_handler() {
+  int ret;
+  
+  printf("Exit signal recieved!\nClosing down daemon...\n");
+
+  ret = inotify_rm_watch(IEventQueue, IEventStatus);
+  if (ret == -1) {
+    perror("Error removing file from watch!");
+  }
+  
+  close(IEventQueue);
+  notify_uninit();
+  
+  exit(EXIT_SUCCESS);
 }
 
 int main(int argc, char **argv) {
@@ -109,6 +125,8 @@ int main(int argc, char **argv) {
     perror("Failed to daemonize: ");
     exit(ERR_DAEMON);
   }
+
+  signal(SIGINT, signal_handler);
   
   char *base_path = NULL;
   if (argc != 2) {
