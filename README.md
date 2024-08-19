@@ -1,7 +1,8 @@
 # watchcatd
 
 Simple daemon to keep track of changes on a file. Changes being access, 
-modify and delete.
+modify and delete. Can be used, for example, to monitor external server
+log file to see when someone logs into the server.
 
 ## Installation
 
