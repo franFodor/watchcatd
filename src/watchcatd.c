@@ -9,16 +9,8 @@
 
 #define BUFFER_MAX          4096
 
-#define ERR_ARGS            1
-#define ERR_MEM_ALLOC       2
-#define ERR_INIT_INOTIFY    3
-#define ERR_INOTIFY_ADD     4
-#define ERR_INOTIFY_READ    5
-#define ERR_DAEMON          6
-#define ERR_NOTIFY_INIT     7
-
-int IEventQueue;
-int IEventStatus;
+int i_event_queue;
+int i_event_status;
 
 static void get_filename(char **buf ) {
   char *token = NULL;
@@ -43,31 +35,31 @@ static void handle_file_changes(char *file_name, char *file_path) {
   ret = notify_init(program_title);
   if (!ret) {
     perror("Error initilizing notify: ");
-    exit(ERR_NOTIFY_INIT);
+    exit(EXIT_FAILURE);
   }
 
   const struct inotify_event *watch_event;
   const int watch_mask = IN_DELETE | IN_ACCESS | IN_MODIFY; 
 
-  IEventQueue = inotify_init();
-  if (IEventQueue == -1) {
+  i_event_queue = inotify_init();
+  if (i_event_queue == -1) {
     perror("Error initilizing inotify instance: ");
-    exit(ERR_INIT_INOTIFY);
+    exit(EXIT_FAILURE);
   }
 
-  IEventStatus = inotify_add_watch(IEventQueue, file_path, watch_mask);
-  if (IEventStatus == -1) {
+  i_event_status = inotify_add_watch(i_event_queue, file_path, watch_mask);
+  if (i_event_status == -1) {
     perror("Error adding file to watch instance: ");
-    exit(ERR_INOTIFY_ADD);
+    exit(EXIT_FAILURE);
   }
   
   while (1) {
      //fprintf(stdout, "Waiting for event...\n");
 
-     read_length = read(IEventQueue, buffer, BUFFER_MAX);
+     read_length = read(i_event_queue, buffer, BUFFER_MAX);
      if (read_length == -1) {
        perror("Error reading for inotify instance: ");
-       exit(ERR_INOTIFY_READ);
+       exit(EXIT_FAILURE);
      }
      
      for (char *buffer_pointer = buffer; buffer_pointer < buffer + read_length; buffer_pointer += sizeof(struct inotify_event) + watch_event->len) {
@@ -103,17 +95,17 @@ static void handle_file_changes(char *file_name, char *file_path) {
   }  
 }
 
-void signal_handler() {
+static void signal_handler() {
   int ret;
   
   printf("Exit signal recieved!\nClosing down daemon...\n");
 
-  ret = inotify_rm_watch(IEventQueue, IEventStatus);
+  ret = inotify_rm_watch(i_event_queue, i_event_status);
   if (ret == -1) {
     perror("Error removing file from watch!");
   }
   
-  close(IEventQueue);
+  close(i_event_queue);
   notify_uninit();
   
   exit(EXIT_SUCCESS);
@@ -123,7 +115,7 @@ int main(int argc, char **argv) {
   int ret = daemon(1, 1);
   if (ret == -1) {
     perror("Failed to daemonize: ");
-    exit(ERR_DAEMON);
+    exit(EXIT_FAILURE);
   }
 
   signal(SIGINT, signal_handler);
@@ -131,13 +123,13 @@ int main(int argc, char **argv) {
   char *base_path = NULL;
   if (argc != 2) {
     fprintf(stderr, "USAGE: watchcatd <PATH>");
-    exit(ERR_ARGS);
+    exit(EXIT_FAILURE);
   }
 
   base_path = (char *)malloc(sizeof(char) * strlen(argv[1]) + 1);
   if (!base_path) {
     perror("Memory allocation failed: ");
-    exit(ERR_MEM_ALLOC);
+    exit(EXIT_FAILURE);
   }
 
   strcpy(base_path, argv[1]);
